@@ -2,12 +2,15 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Load player and enemy images
+// Load player, enemy, and power-up images
 const playerImage = new Image();
 playerImage.src = 'Rick.png';  // Replace with the correct path to your player image
 
 const enemyImage = new Image();
 enemyImage.src = 'PCN.png';  // Replace with the correct path to your enemy image
+
+const powerUpImage = new Image();
+powerUpImage.src = 'copilot.png';  // Replace with the correct path to your power-up image
 
 // Set up the player
 const player = {
@@ -95,7 +98,6 @@ setInterval(() => {
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         size: 15,
-        color: 'blue',
         type: 'power' // Now includes bullet power-up
     };
     powerUps.push(powerUp);
@@ -198,8 +200,7 @@ function draw() {
     });
 
     powerUps.forEach(powerUp => {
-        ctx.fillStyle = powerUp.color;
-        ctx.fillRect(powerUp.x, powerUp.y, powerUp.size, powerUp.size);
+        ctx.drawImage(powerUpImage, powerUp.x, powerUp.y, powerUp.size, powerUp.size);
     });
 
     drawHealthBar();
