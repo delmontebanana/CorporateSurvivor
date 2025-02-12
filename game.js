@@ -4,27 +4,54 @@ const ctx = canvas.getContext('2d');
 
 // Load player, enemy, and power-up images
 const playerImage = new Image();
-playerImage.src = 'Rick.png';  // Replace with the correct path to your player image
+playerImage.src = 'images/Rick.png';  // Replace with the correct path to your player image
 
 const enemyImage = new Image();
-enemyImage.src = 'PCN.png';  // Replace with the correct path to your enemy image
+enemyImage.src = 'images/PCN.png';  // Replace with the correct path to your enemy image
 
 const powerUpImage = new Image();
-powerUpImage.src = 'copilot.png';  // Replace with the correct path to your power-up image
+powerUpImage.src = 'images/copilot.png';  // Replace with the correct path to your power-up image
+
+// Play background music after user interaction
+document.addEventListener('click', () => {
+    if (backgroundMusic.paused) {
+        backgroundMusic.play().catch(error => console.error('Autoplay prevented:', error));
+    }
+});
+
+// Load background music and level-up sound
+const backgroundMusic = new Audio('sounds/Retro.mp3');
+backgroundMusic.loop = true;
+backgroundMusic.volume = 0.5;
+
+const levelUpSound = new Audio('sounds/levelup.mp3');
+
+// Start background music after user clicks
+document.addEventListener('click', () => {
+    if (backgroundMusic.paused) {
+        backgroundMusic.play().catch(error => console.error('Autoplay prevented:', error));
+    }
+});
+
 
 // Set up the player
 const player = {
     x: canvas.width / 2,
     y: canvas.height / 2,
-    width: 20,
-    height: 20,
+    width: 35,
+    height: 35,
     speed: 3,
     health: 100,
-    maxHealth: 100
+    maxHealth: 100,
+    level: 1,
+    experience: 0,
+    experienceToNextLevel: 100,
+    damageMultiplier: 1 // Add damage multiplier for level-ups
 };
 
 let score = 0;
 let bulletPower = 1;
+let killCount = 0; // Track the number of kills
 
 // Key tracking
 let keys = {};
@@ -50,9 +77,26 @@ document.addEventListener('keyup', (e) => {
 // Function to spawn enemies
 function spawnEnemy() {
     const size = 20;
+    const edge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+    let x, y;
+
+    if (edge === 0) { // Top
+        x = Math.random() * canvas.width;
+        y = -size;
+    } else if (edge === 1) { // Right
+        x = canvas.width + size;
+        y = Math.random() * canvas.height;
+    } else if (edge === 2) { // Bottom
+        x = Math.random() * canvas.width;
+        y = canvas.height + size;
+    } else { // Left
+        x = -size;
+        y = Math.random() * canvas.height;
+    }
+
     const enemy = {
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
+        x: x,
+        y: y,
         width: size,
         height: size,
         speed: enemySpeed
@@ -61,24 +105,24 @@ function spawnEnemy() {
 }
 
 // Spawn enemies and increase difficulty over time
-setInterval(() => {
-    spawnEnemy();
+let spawnIntervalId = setInterval(spawnEnemy, enemySpawnInterval);
 
+setInterval(() => {
     if (Math.floor(performance.now() / 1000) % 10 === 0) {
         enemySpeed += 0.2;
     }
 
     if (Math.floor(performance.now() / 1000) % 20 === 0 && enemySpawnInterval > 500) {
-        clearInterval(enemySpawnInterval);
+        clearInterval(spawnIntervalId);
         enemySpawnInterval -= 200;
-        setInterval(spawnEnemy, enemySpawnInterval);
+        spawnIntervalId = setInterval(spawnEnemy, enemySpawnInterval);
     }
-}, enemySpawnInterval);
+}, 1000);
 
 // Auto-shoot projectiles every second
 setInterval(() => {
     for (let i = 0; i < bulletPower; i++) {
-        const angle = (Math.PI / bulletPower) * i;
+        const angle = (Math.PI * 2 / bulletPower) * i;
         const projectile = {
             x: player.x + player.width / 2,
             y: player.y + player.height / 2,
@@ -86,7 +130,8 @@ setInterval(() => {
             speed: 5,
             color: 'yellow',
             dx: Math.cos(angle) * 5,
-            dy: Math.sin(angle) * 5
+            dy: Math.sin(angle) * 5,
+            damage: 10 * player.damageMultiplier // Apply damage multiplier
         };
         projectiles.push(projectile);
     }
@@ -149,6 +194,8 @@ function update() {
                 enemies.splice(eIndex, 1);
                 projectiles.splice(pIndex, 1);
                 score += 10; // Increase score when enemy is hit
+                gainExperience(20); // Gain experience when enemy is hit
+                killCount++; // Increment kill count
             }
         });
     });
@@ -184,6 +231,18 @@ function update() {
     });
 }
 
+function gainExperience(amount) {
+    player.experience += amount;
+    if (player.experience >= player.experienceToNextLevel) {
+        player.experience -= player.experienceToNextLevel;
+        player.level += 1;
+        player.experienceToNextLevel = Math.floor(player.experienceToNextLevel * 1.5);
+        player.speed += 0.5; // Increase speed on level up
+        player.damageMultiplier += 0.1; // Increase damage multiplier on level up
+        levelUpSound.play(); // Play level-up sound
+    }
+}
+
 // Draw the game
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -205,6 +264,7 @@ function draw() {
 
     drawHealthBar();
     drawScore();
+    drawExperienceBar();
 }
 
 function drawHealthBar() {
@@ -222,13 +282,33 @@ function drawHealthBar() {
 
     ctx.fillStyle = 'white';
     ctx.font = '16px Arial';
-    ctx.fillText(`Health: ${player.health}`, x + 10, y + 15);
+    ctx.fillText(`Health: ${Math.ceil(player.health)}`, x + 10, y + 15);
 }
 
 function drawScore() {
     ctx.fillStyle = 'white';
     ctx.font = '20px Arial';
-    ctx.fillText(`Score: ${score}`, canvas.width - 120, 30);
+    ctx.fillText(`Score: ${score}`, canvas.width - 150, 30);
+    ctx.fillText(`Level: ${player.level}`, canvas.width - 150, 60);
+    ctx.fillText(`Kills: ${killCount}`, canvas.width - 150, 90); // Display kill count
+}
+
+function drawExperienceBar() {
+    const barWidth = 200;
+    const barHeight = 20;
+    const x = 20;
+    const y = 50;
+
+    ctx.fillStyle = 'gray';
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    const expWidth = (player.experience / player.experienceToNextLevel) * barWidth;
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(x, y, expWidth, barHeight);
+
+    ctx.fillStyle = 'white';
+    ctx.font = '16px Arial';
+    ctx.fillText(`EXP: ${player.experience}/${player.experienceToNextLevel}`, x + 10, y + 15);
 }
 
 // Start the game loop
