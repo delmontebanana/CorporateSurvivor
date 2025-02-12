@@ -12,13 +12,6 @@ enemyImage.src = 'images/PCN.png';  // Replace with the correct path to your ene
 const powerUpImage = new Image();
 powerUpImage.src = 'images/copilot.png';  // Replace with the correct path to your power-up image
 
-// Play background music after user interaction
-document.addEventListener('click', () => {
-    if (backgroundMusic.paused) {
-        backgroundMusic.play().catch(error => console.error('Autoplay prevented:', error));
-    }
-});
-
 // Load background music and level-up sound
 const backgroundMusic = new Audio('sounds/Retro.mp3');
 backgroundMusic.loop = true;
@@ -26,13 +19,12 @@ backgroundMusic.volume = 0.5;
 
 const levelUpSound = new Audio('sounds/levelup.mp3');
 
-// Start background music after user clicks
+// Play background music after user interaction
 document.addEventListener('click', () => {
     if (backgroundMusic.paused) {
         backgroundMusic.play().catch(error => console.error('Autoplay prevented:', error));
     }
 });
-
 
 // Set up the player
 const player = {
