@@ -865,7 +865,7 @@ let bossFireballs = []; // separate array for boss projectiles
 const bossImage = new Image(); bossImage.src = 'sundar.jpg';
 let boss = null; // null when no boss active
 let bossNumber = 0; // how many bosses have been defeated
-let nextBossTime = 300; // first boss at 5 minutes (seconds)
+let nextBossTime = 120; // first boss at 2 minutes (seconds)
 
 // Difficulty
 let enemySpawnInterval = 1800, enemySpeed = 1.4, spawnIntervalId = null;
@@ -896,7 +896,7 @@ function startGame() {
             enemySpawnInterval = Math.max(400, enemySpawnInterval - 150);
             spawnIntervalId = setInterval(spawnEnemy, enemySpawnInterval);
         }
-        // Boss every 5 minutes
+        // Boss at 2 mins, then every 3 mins
         if (!boss && elapsed >= nextBossTime) {
             spawnBoss();
         }
@@ -909,7 +909,9 @@ function startGame() {
     // Auto-shoot (berserker halves interval)
     let shootIntervalId = null;
     function scheduleShoot() {
-        const interval = berserkerTimer > 0 ? 425 : 850;
+        // Fire rate improves with level: each level reduces interval by 30ms, min 200ms
+        const baseInterval = Math.max(200, 850 - (player.level - 1) * 30);
+        const interval = berserkerTimer > 0 ? Math.floor(baseInterval / 2) : baseInterval;
         shootIntervalId = setTimeout(() => {
             if (gameRunning && !gameOver && !gamePaused) shootAll();
             scheduleShoot();
@@ -1001,8 +1003,8 @@ function spawnPowerUp() {
 // ============================================================
 function spawnBoss() {
     const difficulty = bossNumber + 1;
-    const bossW = player.width * 10;
-    const bossH = player.height * 10;
+    const bossW = player.width * 5;
+    const bossH = player.height * 5;
     // Spawn off screen
     boss = {
         x: camera.x + canvas.width + 100,
@@ -1020,7 +1022,7 @@ function spawnBoss() {
         difficulty
     };
     bossNumber++;
-    nextBossTime += 300; // next boss 5 mins later
+    nextBossTime += 180; // next boss 3 mins later
 }
 
 function showBossWarning() {
@@ -1454,9 +1456,9 @@ function update() {
     camera.x = Math.max(0, Math.min(WORLD_W-canvas.width, camera.x));
     camera.y = Math.max(0, Math.min(WORLD_H-canvas.height, camera.y));
 
-    // Enemy damage scales with player level (each level adds 15% more damage)
-    const enemyDmgScale = 1 + (player.level - 1) * 0.15;
-    const baseDmg = 0.35 * enemyDmgScale;
+    // Enemy damage scales aggressively with player level (30% more per level)
+    const enemyDmgScale = 1 + (player.level - 1) * 0.30;
+    const baseDmg = 0.55 * enemyDmgScale;
 
     // Tick special timers
     if (freezeTimer > 0) { freezeTimer--; if (freezeTimer===0) enemies.forEach(e=>e.frozen=false); }
