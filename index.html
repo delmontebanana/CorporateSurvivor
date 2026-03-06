@@ -677,8 +677,18 @@
 <div id="title-screen">
     <h1>CORPORATE<br>SURVIVOR</h1>
     <div class="subtitle">— survive the 9 to 5 —</div>
-    <button id="start-btn" onclick="showCharSelect()"><span>▶ START GAME</span></button>
-    <div class="controls-hint">
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('start-btn').addEventListener('click', showCharSelect);
+    
+    document.querySelectorAll('.char-tile').forEach(tile => {
+        tile.addEventListener('click', () => {
+            if (!charSelectActive) return;
+            charIndex = parseInt(tile.dataset.index);
+            updateCharCursor();
+            setTimeout(confirmCharSelect, 180);
+        });
+    });
+});    <div class="controls-hint">
         WASD / ARROW KEYS TO MOVE<br>
         AUTO-SHOOT ENEMIES<br>
         COLLECT COPILOT POWER-UPS<br>
