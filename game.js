@@ -4,20 +4,20 @@ const ctx = canvas.getContext('2d');
 
 // Load player, enemy, and power-up images
 const playerImage = new Image();
-playerImage.src = 'archive/images/Rick.png';  // Replace with the correct path to your player image
+playerImage.src = 'images/Rick.png';  // Replace with the correct path to your player image
 
 const enemyImage = new Image();
-enemyImage.src = 'archive/images/PCN.png';  // Replace with the correct path to your enemy image
+enemyImage.src = 'images/PCN.png';  // Replace with the correct path to your enemy image
 
 const powerUpImage = new Image();
-powerUpImage.src = 'archive/images/copilot.png';  // Replace with the correct path to your power-up image
+powerUpImage.src = 'images/copilot.png';  // Replace with the correct path to your power-up image
 
 // Load background music and level-up sound
-const backgroundMusic = new Audio('archive/sounds/Retro.mp3');
+const backgroundMusic = new Audio('sounds/Retro.mp3');
 backgroundMusic.loop = true;
 backgroundMusic.volume = 0.5;
 
-const levelUpSound = new Audio('archive/sounds/levelup.mp3');
+const levelUpSound = new Audio('sounds/levelup.mp3');
 
 // Play background music after user interaction
 document.addEventListener('click', () => {
@@ -305,4 +305,5 @@ function drawExperienceBar() {
 
 // Start the game loop
 gameLoop();
+
 
