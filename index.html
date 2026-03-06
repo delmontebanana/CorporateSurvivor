@@ -112,6 +112,106 @@
             line-height: 2.2;
         }
 
+        /* ---- CHARACTER SELECT ---- */
+        #char-select-screen {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse at center, #1a0010 0%, #0a0a0f 70%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+            gap: 32px;
+        }
+
+        #char-select-screen h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(10px, 2.2vw, 20px);
+            color: #ffcc44;
+            text-shadow: 0 0 16px #ffaa00, 3px 3px 0 #664400;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        #char-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+            position: relative;
+        }
+
+        .char-tile {
+            width: clamp(100px, 14vw, 150px);
+            height: clamp(100px, 14vw, 150px);
+            position: relative;
+            border: 3px solid #ff333333;
+            overflow: hidden;
+            background: #111;
+            image-rendering: pixelated;
+        }
+
+        .char-tile img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            display: block;
+            filter: saturate(0.7) brightness(0.75);
+            transition: filter 0.1s;
+        }
+
+        .char-tile.selected img {
+            filter: saturate(1.2) brightness(1.1);
+        }
+
+        .char-name {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(5px, 0.9vw, 8px);
+            color: #ffcc44;
+            text-align: center;
+            background: rgba(0,0,0,0.75);
+            padding: 4px 2px;
+            letter-spacing: 1px;
+        }
+
+        /* Flashing cursor box */
+        #char-cursor {
+            position: absolute;
+            border: 3px solid #fff;
+            box-shadow: 0 0 0 2px #ff3333, 0 0 14px #ff3333, inset 0 0 14px rgba(255,50,50,0.15);
+            pointer-events: none;
+            transition: top 0.08s steps(1), left 0.08s steps(1), width 0s, height 0s;
+            animation: cursorBlink 0.45s step-end infinite;
+            z-index: 10;
+        }
+
+        @keyframes cursorBlink {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        #char-select-hint {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(6px, 1vw, 9px);
+            color: #ff4444aa;
+            letter-spacing: 2px;
+            text-align: center;
+            line-height: 2.4;
+        }
+
+        #char-confirm-text {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(7px, 1.2vw, 11px);
+            color: #44ffaa;
+            text-shadow: 0 0 12px #00ff88;
+            text-align: center;
+            animation: btnBlink 0.8s step-end infinite;
+            letter-spacing: 1px;
+        }
+
         #game-wrapper {
             position: relative;
             z-index: 1;
@@ -360,13 +460,39 @@
 <div id="title-screen">
     <h1>CORPORATE<br>SURVIVOR</h1>
     <div class="subtitle">— survive the 9 to 5 —</div>
-    <button id="start-btn" onclick="startGame()"><span>▶ START GAME</span></button>
+    <button id="start-btn" onclick="showCharSelect()"><span>▶ START GAME</span></button>
     <div class="controls-hint">
         WASD / ARROW KEYS TO MOVE<br>
         AUTO-SHOOT ENEMIES<br>
         COLLECT COPILOT POWER-UPS<br>
         SURVIVE AS LONG AS POSSIBLE
     </div>
+</div>
+
+<!-- Character Select Screen -->
+<div id="char-select-screen">
+    <h2>SELECT YOUR FIGHTER</h2>
+    <div id="char-grid">
+        <div id="char-cursor"></div>
+        <div class="char-tile" data-index="0">
+            <img src="Rick.png" alt="Rick">
+            <div class="char-name">RICK</div>
+        </div>
+        <div class="char-tile" data-index="1">
+            <img src="kate.jpg" alt="Kate">
+            <div class="char-name">KATE</div>
+        </div>
+        <div class="char-tile" data-index="2">
+            <img src="thom.jpg" alt="Thom">
+            <div class="char-name">THOM</div>
+        </div>
+        <div class="char-tile" data-index="3">
+            <img src="jobibby.jpg" alt="Jobibby">
+            <div class="char-name">JOBIBBY</div>
+        </div>
+    </div>
+    <div id="char-confirm-text">PRESS ENTER OR SPACE TO CONFIRM</div>
+    <div id="char-select-hint">WASD / ARROW KEYS TO SELECT</div>
 </div>
 
 <div id="game-over">
@@ -430,11 +556,79 @@ resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 // Assets
-const playerImage = new Image(); playerImage.src = 'Rick.png';
+const playerImage = new Image(); playerImage.src = 'Rick.png'; // default, overridden by char select
 const enemyImage = new Image(); enemyImage.src = 'PCN.png';
 const powerUpImage = new Image(); powerUpImage.src = 'copilot.png';
 const bgMusic = new Audio('Retro.mp3'); bgMusic.loop = true; bgMusic.volume = 0.4;
 const levelUpSound = new Audio('levelup.mp3'); levelUpSound.volume = 0.7;
+
+// ============================================================
+// CHARACTER SELECT
+// ============================================================
+const CHARACTERS = [
+    { name: 'RICK',    src: 'Rick.png' },
+    { name: 'KATE',    src: 'kate.jpg' },
+    { name: 'THOM',    src: 'thom.jpg' },
+    { name: 'JOBIBBY', src: 'jobibby.jpg' }
+];
+let charIndex = 0;
+let charSelectActive = false;
+
+function showCharSelect() {
+    document.getElementById('title-screen').style.display = 'none';
+    document.getElementById('char-select-screen').style.display = 'flex';
+    charSelectActive = true;
+    charIndex = 0;
+    updateCharCursor();
+}
+
+function updateCharCursor() {
+    const tiles = document.querySelectorAll('.char-tile');
+    const grid = document.getElementById('char-grid');
+    tiles.forEach((t, i) => t.classList.toggle('selected', i === charIndex));
+    const tile = tiles[charIndex];
+    const cursor = document.getElementById('char-cursor');
+    // Position cursor over selected tile (relative to grid)
+    const tileRect = tile.getBoundingClientRect();
+    const gridRect = grid.getBoundingClientRect();
+    cursor.style.left   = (tileRect.left - gridRect.left - 3) + 'px';
+    cursor.style.top    = (tileRect.top  - gridRect.top  - 3) + 'px';
+    cursor.style.width  = (tileRect.width  + 6) + 'px';
+    cursor.style.height = (tileRect.height + 6) + 'px';
+}
+
+function confirmCharSelect() {
+    charSelectActive = false;
+    const chosen = CHARACTERS[charIndex];
+    playerImage.src = chosen.src;
+    document.getElementById('char-select-screen').style.display = 'none';
+    startGame();
+}
+
+// Mouse/touch support for char tiles
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.char-tile').forEach(tile => {
+        tile.addEventListener('click', () => {
+            if (!charSelectActive) return;
+            charIndex = parseInt(tile.dataset.index);
+            updateCharCursor();
+            setTimeout(confirmCharSelect, 180);
+        });
+    });
+});
+
+// Key handler for character select (injected into existing keydown)
+function handleCharSelectKeys(e) {
+    if (!charSelectActive) return;
+    const cols = 4;
+    if (e.key==='ArrowRight'||e.key==='d'||e.key==='D') { charIndex = (charIndex+1) % CHARACTERS.length; updateCharCursor(); e.preventDefault(); }
+    else if (e.key==='ArrowLeft'||e.key==='a'||e.key==='A') { charIndex = (charIndex+CHARACTERS.length-1) % CHARACTERS.length; updateCharCursor(); e.preventDefault(); }
+    else if (e.key==='ArrowDown'||e.key==='s'||e.key==='S') { charIndex = Math.min(charIndex+cols, CHARACTERS.length-1); updateCharCursor(); e.preventDefault(); }
+    else if (e.key==='ArrowUp'||e.key==='w'||e.key==='W') { charIndex = Math.max(charIndex-cols, 0); updateCharCursor(); e.preventDefault(); }
+    else if (e.key==='Enter'||e.key===' ') { confirmCharSelect(); e.preventDefault(); }
+}
+document.addEventListener('keydown', handleCharSelectKeys);
+window.addEventListener('resize', () => { if (charSelectActive) updateCharCursor(); });
 
 let musicStarted = false;
 document.addEventListener('click', () => {
