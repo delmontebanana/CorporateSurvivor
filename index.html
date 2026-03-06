@@ -595,6 +595,73 @@
         }
 
         #restart-btn:hover { background: #ff3333; color: #fff; }
+
+        /* ---- TOUCH CONTROLS ---- */
+        #touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        #joystick-zone {
+            position: absolute;
+            bottom: 18px;
+            left: 18px;
+            width: 130px;
+            height: 130px;
+            pointer-events: all;
+            touch-action: none;
+        }
+
+        #joystick-base {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.45);
+        }
+
+        #joystick-stick {
+            position: absolute;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, rgba(255,100,100,0.9), rgba(180,0,0,0.7));
+            border: 2px solid rgba(255,100,100,0.6);
+            box-shadow: 0 0 12px rgba(255,50,50,0.5);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        #pause-touch-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.55);
+            border: 2px solid rgba(255,200,0,0.4);
+            color: #ffcc44;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+            touch-action: none;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        @media (max-width: 600px) {
+            .pause-btn { width: 80vw; max-width: 300px; padding: 16px 20px; }
+            #char-select-hint { display: none; }
+            #char-confirm-text { font-size: clamp(6px, 2.5vw, 9px); }
+        }
     </style>
 </head>
 <body>
@@ -686,6 +753,15 @@
     <div id="pickup-notify"></div>
     <div id="wave-notify"></div>
     <div id="kill-feed"></div>
+
+    <!-- Touch Controls -->
+    <div id="touch-controls">
+        <div id="joystick-zone">
+            <div id="joystick-base"></div>
+            <div id="joystick-stick"></div>
+        </div>
+        <div id="pause-touch-btn" onclick="gamePaused ? resumeGame() : pauseGame()">II</div>
+    </div>
 </div>
 
 <script>
@@ -1146,13 +1222,15 @@ function updateHUD() {
 function update() {
     if (gameOver || gamePaused) return;
 
-    // Movement
+    // Movement — keyboard OR joystick
     let dx=0, dy=0;
     if (keys['ArrowUp']||keys['w']||keys['W']) dy=-1;
     if (keys['ArrowDown']||keys['s']||keys['S']) dy=1;
     if (keys['ArrowLeft']||keys['a']||keys['A']) dx=-1;
     if (keys['ArrowRight']||keys['d']||keys['D']) dx=1;
-    if (dx&&dy) { dx*=0.707; dy*=0.707; }
+    // Joystick overrides keyboard if active
+    if (joystick.active) { dx = joystick.nx; dy = joystick.ny; }
+    if (dx&&dy&&!joystick.active) { dx*=0.707; dy*=0.707; }
     if (dx) player.facing = dx>0?1:-1;
     player.x = Math.max(20, Math.min(WORLD_W-player.width-20, player.x+dx*player.speed));
     player.y = Math.max(20, Math.min(WORLD_H-player.height-20, player.y+dy*player.speed));
@@ -1603,7 +1681,82 @@ function gameLoop() {
         draw();
     }
     requestAnimationFrame(gameLoop);
+// ============================================================
+// TOUCH CONTROLS — Virtual Joystick
+// ============================================================
+const joystick = { active: false, id: null, nx: 0, ny: 0 };
+const STICK_MAX = 45; // max px from centre
+
+function initTouchControls() {
+    // Only show on touch-capable devices
+    const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    if (!isTouch) return;
+
+    document.getElementById('touch-controls').style.display = 'block';
+
+    const zone  = document.getElementById('joystick-zone');
+    const stick = document.getElementById('joystick-stick');
+
+    function getZoneCenter() {
+        const r = zone.getBoundingClientRect();
+        return { cx: r.left + r.width/2, cy: r.top + r.height/2 };
+    }
+
+    function moveStick(touchX, touchY) {
+        const { cx, cy } = getZoneCenter();
+        let ox = touchX - cx;
+        let oy = touchY - cy;
+        const dist = Math.hypot(ox, oy);
+        if (dist > STICK_MAX) { ox = ox/dist*STICK_MAX; oy = oy/dist*STICK_MAX; }
+        stick.style.transform = `translate(calc(-50% + ${ox}px), calc(-50% + ${oy}px))`;
+        joystick.nx = ox / STICK_MAX;
+        joystick.ny = oy / STICK_MAX;
+        joystick.active = true;
+    }
+
+    function resetStick() {
+        stick.style.transform = 'translate(-50%, -50%)';
+        joystick.active = false;
+        joystick.nx = 0;
+        joystick.ny = 0;
+        joystick.id = null;
+    }
+
+    zone.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        joystick.id = t.identifier;
+        moveStick(t.clientX, t.clientY);
+        // Start music on first touch
+        if (!musicStarted && gameRunning) { bgMusic.play().catch(()=>{}); musicStarted = true; }
+    }, { passive: false });
+
+    zone.addEventListener('touchmove', e => {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+            if (t.identifier === joystick.id) { moveStick(t.clientX, t.clientY); break; }
+        }
+    }, { passive: false });
+
+    zone.addEventListener('touchend', e => {
+        e.preventDefault();
+        for (const t of e.changedTouches) {
+            if (t.identifier === joystick.id) { resetStick(); break; }
+        }
+    }, { passive: false });
+
+    zone.addEventListener('touchcancel', e => { resetStick(); }, { passive: false });
+
+    // Prevent scrolling on the whole canvas while playing
+    canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
 }
+
+// Call after game starts
+const _origStartGame = startGame;
+startGame = function() {
+    _origStartGame();
+    initTouchControls();
+};
 </script>
 </body>
 </html>
