@@ -851,6 +851,7 @@ function exitToTitle() {
     gamePaused = false; gameRunning = false; gameOver = false;
     bgMusic.pause(); bgMusic.currentTime = 0;
     clearInterval(spawnIntervalId); clearInterval(difficultyTimer);
+    boss = null; bossFireballs = [];
     document.getElementById('pause-screen').style.display = 'none';
     document.getElementById('game-wrapper').style.display = 'none';
     document.getElementById('title-screen').style.display = 'flex';
@@ -858,6 +859,13 @@ function exitToTitle() {
 
 // Entity arrays
 let enemies = [], projectiles = [], powerUps = [], particles = [], floatingTexts = [], xpOrbs = [];
+let bossFireballs = []; // separate array for boss projectiles
+
+// Boss state
+const bossImage = new Image(); bossImage.src = 'sundar.jpg';
+let boss = null; // null when no boss active
+let bossNumber = 0; // how many bosses have been defeated
+let nextBossTime = 300; // first boss at 5 minutes (seconds)
 
 // Difficulty
 let enemySpawnInterval = 1800, enemySpeed = 1.4, spawnIntervalId = null;
@@ -878,16 +886,23 @@ function startGame() {
     spawnIntervalId = setInterval(spawnEnemy, enemySpawnInterval);
 
     difficultyTimer = setInterval(() => {
-        if (!gameRunning) return;
+        if (!gameRunning || gamePaused) return;
         const elapsed = (performance.now() - startTime) / 1000;
         const newWave = Math.floor(elapsed / 30) + 1;
         if (newWave > wave) { wave = newWave; showWaveNotify(wave); }
         enemySpeed = 1.4 + elapsed * 0.006;
-        // Speed up spawning every 30s
         if (elapsed > 0 && elapsed % 30 < 1.1 && enemySpawnInterval > 400) {
             clearInterval(spawnIntervalId);
             enemySpawnInterval = Math.max(400, enemySpawnInterval - 150);
             spawnIntervalId = setInterval(spawnEnemy, enemySpawnInterval);
+        }
+        // Boss every 5 minutes
+        if (!boss && elapsed >= nextBossTime) {
+            spawnBoss();
+        }
+        // Boss warning 10s before
+        if (!boss && elapsed >= nextBossTime - 10 && elapsed < nextBossTime - 9) {
+            showBossWarning();
         }
     }, 1000);
 
@@ -975,7 +990,282 @@ function spawnPowerUp() {
     const type = pool[Math.floor(Math.random()*pool.length)];
     const px = Math.max(60, Math.min(WORLD_W-60, player.x + (Math.random()-0.5)*500));
     const py = Math.max(60, Math.min(WORLD_H-60, player.y + (Math.random()-0.5)*500));
-    powerUps.push({ x: px, y: py, size: 28, type, pulsePhase: Math.random()*Math.PI*2, bobPhase: Math.random()*Math.PI*2 });
+    powerUps.push({ x: px, y: py, size: 28, type,
+        pulsePhase: Math.random()*Math.PI*2, bobPhase: Math.random()*Math.PI*2,
+        life: 600, maxLife: 600 // 10 seconds at 60fps
+    });
+}
+
+// ============================================================
+// BOSS
+// ============================================================
+function spawnBoss() {
+    const difficulty = bossNumber + 1;
+    const bossW = player.width * 10;
+    const bossH = player.height * 10;
+    // Spawn off screen
+    boss = {
+        x: camera.x + canvas.width + 100,
+        y: camera.y + canvas.height/2 - bossH/2,
+        width: bossW, height: bossH,
+        speed: 0.6 + bossNumber * 0.15,
+        health: 500 * difficulty,
+        maxHealth: 500 * difficulty,
+        flashTimer: 0,
+        mouthOpen: 0,       // 0=closed, 1=open
+        mouthPhase: 0,      // animation phase
+        fireTimer: 0,
+        fireInterval: Math.max(60, 120 - bossNumber * 15), // shoots faster each time
+        wobble: 0,
+        difficulty
+    };
+    bossNumber++;
+    nextBossTime += 300; // next boss 5 mins later
+}
+
+function showBossWarning() {
+    const el = document.getElementById('wave-notify');
+    el.textContent = '⚠ BOSS INCOMING ⚠';
+    el.style.color = '#ff0000';
+    el.style.fontSize = 'clamp(11px, 2vw, 18px)';
+    el.style.opacity = '1';
+    el.style.animation = 'none'; el.offsetHeight;
+    el.style.animation = 'pickupAnim 3s ease-out forwards';
+}
+
+function updateBoss() {
+    if (!boss) return;
+
+    // Move toward player
+    const ddx = player.x + player.width/2 - (boss.x + boss.width/2);
+    const ddy = player.y + player.height/2 - (boss.y + boss.height/2);
+    const dist = Math.hypot(ddx, ddy);
+    boss.wobble += 0.03;
+
+    // Keep some distance — circle the player
+    const targetDist = 200;
+    if (dist > targetDist + 20) {
+        boss.x += (ddx / dist) * boss.speed;
+        boss.y += (ddy / dist) * boss.speed;
+    } else if (dist < targetDist - 20) {
+        boss.x -= (ddx / dist) * boss.speed * 0.5;
+        boss.y -= (ddy / dist) * boss.speed * 0.5;
+    } else {
+        // Strafe sideways
+        boss.x += (-ddy / dist) * boss.speed * 0.8;
+        boss.y += (ddx / dist) * boss.speed * 0.8;
+    }
+
+    // Clamp to world
+    boss.x = Math.max(0, Math.min(WORLD_W - boss.width, boss.x));
+    boss.y = Math.max(0, Math.min(WORLD_H - boss.height, boss.y));
+
+    // Mouth animation — open and close
+    boss.mouthPhase += 0.08;
+    boss.mouthOpen = (Math.sin(boss.mouthPhase) + 1) / 2; // 0 to 1
+
+    // Flash timer
+    if (boss.flashTimer > 0) boss.flashTimer--;
+
+    // Shoot fireballs
+    boss.fireTimer--;
+    if (boss.fireTimer <= 0) {
+        boss.fireTimer = boss.fireInterval;
+        // Fire toward player — slow fireball
+        const angle = Math.atan2(ddy, ddx);
+        const spread = boss.difficulty > 2 ? 3 : boss.difficulty > 1 ? 2 : 1;
+        for (let s = 0; s < spread; s++) {
+            const spreadAngle = angle + (s - Math.floor(spread/2)) * 0.25;
+            bossFireballs.push({
+                x: boss.x + boss.width/2,
+                y: boss.y + boss.height * 0.6, // mouth position
+                dx: Math.cos(spreadAngle) * 2.5,
+                dy: Math.sin(spreadAngle) * 2.5,
+                size: 18,
+                damage: 8 * boss.difficulty,
+                life: 300,
+                phase: 0
+            });
+        }
+        screenShake = Math.max(screenShake, 2);
+    }
+
+    // Boss damages player on contact
+    if (player.invincibleTimer === 0 &&
+        player.x < boss.x + boss.width && player.x + player.width > boss.x &&
+        player.y < boss.y + boss.height && player.y + player.height > boss.y) {
+        player.health -= 1.5;
+        player.invincibleTimer = 15;
+        screenShake = Math.max(screenShake, 8);
+    }
+
+    // Forcefield damages boss
+    if (forcefield) {
+        const bdist = Math.hypot(boss.x + boss.width/2 - player.x - player.width/2,
+                                  boss.y + boss.height/2 - player.y - player.height/2);
+        if (bdist < forcefield.radius + boss.width/2) {
+            boss.health -= forcefield.damage * 0.5;
+            boss.flashTimer = 3;
+        }
+    }
+
+    // Mega weapon damages boss
+    if (megaWeapon) {
+        const cx = player.x+player.width/2, cy = player.y+player.height/2;
+        for (let o = 0; o < megaWeapon.orbs; o++) {
+            const ang = megaWeapon.angle + (Math.PI*2/megaWeapon.orbs)*o;
+            const ox = cx + Math.cos(ang)*70, oy = cy + Math.sin(ang)*70;
+            const bdist = Math.hypot(boss.x+boss.width/2-ox, boss.y+boss.height/2-oy);
+            if (bdist < boss.width/2 + 22) {
+                boss.health -= 20 * player.damageMultiplier;
+                boss.flashTimer = 3;
+            }
+        }
+    }
+
+    // Projectiles vs boss
+    for (let i = projectiles.length-1; i >= 0; i--) {
+        const p = projectiles[i];
+        if (p.x < boss.x+boss.width && p.x+p.size > boss.x &&
+            p.y < boss.y+boss.height && p.y+p.size > boss.y) {
+            const dmg = p.damage * (berserkerTimer>0?2:1);
+            boss.health -= dmg;
+            boss.flashTimer = 4;
+            spawnBlood(p.x, p.y, 4);
+            addFloat(boss.x+boss.width/2, boss.y-10, Math.floor(dmg), '#ffdd00', 12);
+            projectiles.splice(i, 1);
+        }
+    }
+
+    // Boss death
+    if (boss.health <= 0) {
+        // Big explosion
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                spawnExplosion(
+                    boss ? boss.x + Math.random()*boss.width : player.x,
+                    boss ? boss.y + Math.random()*boss.height : player.y
+                );
+            }, i * 120);
+        }
+        score += 500 * boss.difficulty;
+        gainXP(200 * boss.difficulty);
+        killCount += 10;
+        screenShake = 20;
+        // Drop a bunch of power-ups
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => spawnPowerUp(), i * 300);
+        }
+        addFloat(boss.x + boss.width/2, boss.y, '🎉 BOSS DEFEATED! +500', '#ffdd00', 14);
+        boss = null;
+        bossFireballs = [];
+    }
+}
+
+function updateBossFireballs() {
+    for (let i = bossFireballs.length-1; i >= 0; i--) {
+        const fb = bossFireballs[i];
+        fb.x += fb.dx; fb.y += fb.dy;
+        fb.life--;
+        fb.phase += 0.15;
+        if (fb.life <= 0 || fb.x < 0 || fb.x > WORLD_W || fb.y < 0 || fb.y > WORLD_H) {
+            bossFireballs.splice(i, 1); continue;
+        }
+        // Hit player
+        if (player.invincibleTimer === 0 &&
+            fb.x < player.x+player.width && fb.x+fb.size > player.x &&
+            fb.y < player.y+player.height && fb.y+fb.size > player.y) {
+            player.health -= fb.damage;
+            player.invincibleTimer = 20;
+            screenShake = Math.max(screenShake, 6);
+            spawnExplosion(fb.x, fb.y);
+            bossFireballs.splice(i, 1);
+        }
+    }
+}
+
+function drawBoss() {
+    if (!boss) return;
+    const cx = boss.x + boss.width/2;
+    const cy = boss.y + boss.height/2;
+    const wb = Math.sin(boss.wobble) * 3;
+
+    ctx.save();
+    if (boss.flashTimer > 0) ctx.filter = 'brightness(8) saturate(0)';
+
+    // Shadow
+    ctx.globalAlpha = 0.3; ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(cx, boss.y+boss.height+6, boss.width*0.45, 12, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Red danger glow
+    ctx.shadowBlur = 40; ctx.shadowColor = '#ff0000';
+    ctx.drawImage(bossImage, boss.x + wb, boss.y, boss.width, boss.height);
+    ctx.filter = 'none';
+    ctx.shadowBlur = 0;
+
+    // Animated mouth overlay — glowing open mouth effect
+    if (boss.mouthOpen > 0.3) {
+        const mouthX = cx;
+        const mouthY = boss.y + boss.height * 0.72;
+        const mouthW = boss.width * 0.35 * boss.mouthOpen;
+        const mouthH = boss.height * 0.12 * boss.mouthOpen;
+        ctx.save();
+        ctx.shadowBlur = 25 * boss.mouthOpen;
+        ctx.shadowColor = '#ff6600';
+        ctx.fillStyle = `rgba(255, 80, 0, ${boss.mouthOpen * 0.85})`;
+        ctx.beginPath();
+        ctx.ellipse(mouthX + wb, mouthY, mouthW, mouthH, 0, 0, Math.PI*2);
+        ctx.fill();
+        // Inner glow
+        ctx.fillStyle = `rgba(255, 220, 50, ${boss.mouthOpen * 0.7})`;
+        ctx.beginPath();
+        ctx.ellipse(mouthX + wb, mouthY, mouthW*0.5, mouthH*0.5, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // Boss health bar — big red bar above
+    const bw = boss.width * 1.1;
+    const bx = boss.x - boss.width*0.05;
+    const by = boss.y - 22;
+    ctx.fillStyle = '#330000'; ctx.fillRect(bx, by, bw, 10);
+    const pct = Math.max(0, boss.health / boss.maxHealth);
+    const barCol = pct > 0.5 ? '#ff3333' : pct > 0.25 ? '#ff8800' : '#ffff00';
+    ctx.fillStyle = barCol; ctx.fillRect(bx, by, bw*pct, 10);
+    ctx.strokeStyle = '#ff000066'; ctx.lineWidth=1; ctx.strokeRect(bx, by, bw, 10);
+
+    // Boss name label
+    ctx.fillStyle = '#ff4444';
+    ctx.font = `bold ${Math.floor(boss.width*0.08)}px 'Press Start 2P', Arial`;
+    ctx.textAlign = 'center';
+    ctx.shadowBlur = 10; ctx.shadowColor = '#ff0000';
+    ctx.fillText(`SUNDAR — BOSS ${boss.difficulty}`, cx, by - 8);
+    ctx.shadowBlur = 0; ctx.textAlign = 'left';
+
+    ctx.restore();
+}
+
+function drawBossFireballs() {
+    bossFireballs.forEach(fb => {
+        const glow = 0.7 + Math.sin(fb.phase) * 0.3;
+        ctx.save();
+        ctx.shadowBlur = 25 * glow; ctx.shadowColor = '#ff6600';
+        // Outer fireball
+        const grad = ctx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, fb.size);
+        grad.addColorStop(0, `rgba(255,255,100,${glow})`);
+        grad.addColorStop(0.4, `rgba(255,120,0,${glow*0.9})`);
+        grad.addColorStop(1, `rgba(200,30,0,0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(fb.x, fb.y, fb.size * glow, 0, Math.PI*2); ctx.fill();
+        // Trail
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#ff6600';
+        ctx.beginPath(); ctx.arc(fb.x - fb.dx*3, fb.y - fb.dy*3, fb.size*0.5, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    });
 }
 
 // ============================================================
@@ -1016,7 +1306,7 @@ function gainXP(amount) {
         player.level++;
         player.experienceToNextLevel = Math.floor(player.experienceToNextLevel * 1.4);
         player.speed = Math.min(player.speed + 0.3, 7);
-        player.damageMultiplier += 0.15;
+        player.damageMultiplier += 0.3; // increased from 0.15 — noticeable jump each level
         player.maxHealth += 10;
         player.health = Math.min(player.maxHealth, player.health + 25);
         screenShake = 10;
@@ -1297,10 +1587,13 @@ function update() {
         if (dist<28) { gainXP(6); xpOrbs.splice(i,1); }
     }
 
-    // Power-ups
+    // Power-ups — tick expiry and remove if expired
     for (let i=powerUps.length-1;i>=0;i--) {
         const pu=powerUps[i];
         pu.pulsePhase+=0.05; pu.bobPhase+=0.04;
+        pu.life--;
+        // Flash when about to expire (last 3 seconds)
+        if (pu.life <= 0) { powerUps.splice(i,1); continue; }
         if (player.x<pu.x+pu.size&&player.x+player.width>pu.x&&
             player.y<pu.y+pu.size&&player.y+player.height>pu.y) {
             applyPowerUp(pu.type);
@@ -1308,6 +1601,10 @@ function update() {
             powerUps.splice(i,1);
         }
     }
+
+    // Boss
+    updateBoss();
+    updateBossFireballs();
 
     // Particles
     for (let i=particles.length-1;i>=0;i--) {
@@ -1371,8 +1668,12 @@ function draw() {
             megaweapon:'#ffaa00', berserker:'#ff4400', vampiric:'#cc44ff'
         };
         const col=cols[pu.type]||'#fff';
+        // Flash when expiring (last 3 seconds = 180 frames)
+        const expiring = pu.life < 180;
+        if (expiring && Math.floor(pu.life / 8) % 2 === 0) return; // blink
         ctx.save();
         ctx.shadowBlur=28+pulse; ctx.shadowColor=col;
+        ctx.globalAlpha = expiring ? 0.6 + Math.sin(pu.life*0.2)*0.4 : 1;
         ctx.fillStyle=col+'44';
         ctx.beginPath(); ctx.arc(pu.x+sz/2, pu.y+sz/2+bob, sz*0.75, 0, Math.PI*2); ctx.fill();
         ctx.drawImage(powerUpImage, pu.x-pulse/2, pu.y-pulse/2+bob, sz+pulse, sz+pulse);
@@ -1383,7 +1684,9 @@ function draw() {
             megaweapon:'☄MEGA', berserker:'🔥RAGE', vampiric:'🩸DRAIN'
         };
         ctx.fillStyle=col; ctx.font='bold 8px Orbitron,Arial'; ctx.textAlign='center';
+        ctx.globalAlpha = expiring ? 0.5 : 1;
         ctx.fillText(labels[pu.type]||'', pu.x+sz/2, pu.y+sz+16+bob);
+        ctx.globalAlpha=1;
     });
 
     // Particles
@@ -1498,6 +1801,12 @@ function draw() {
         ctx.restore();
     }
 
+    // Boss fireballs
+    drawBossFireballs();
+
+    // Boss (drawn on top of everything)
+    drawBoss();
+
     // Projectiles
     projectiles.forEach(p => {
         const a=Math.min(1,p.life/30);
@@ -1562,6 +1871,13 @@ function drawMinimap() {
         const c={health:'#ff4444',bullet:'#ffdd00',speed:'#44ffaa',damage:'#ff8844'}[pu.type]||'#fff';
         ctx.fillStyle=c; ctx.fillRect(mx+pu.x*sx-2,my+pu.y*sy-2,4,4);
     });
+    // Boss on minimap
+    if (boss) {
+        ctx.fillStyle='#ff0000';
+        ctx.shadowBlur=6; ctx.shadowColor='#ff0000';
+        ctx.beginPath(); ctx.arc(mx+boss.x*sx+boss.width*sx/2, my+boss.y*sy+boss.height*sy/2, 5, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur=0;
+    }
     ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(mx+player.x*sx, my+player.y*sy,3,0,Math.PI*2); ctx.fill();
     ctx.strokeStyle='#ffffff22'; ctx.strokeRect(mx+camera.x*sx, my+camera.y*sy, canvas.width*sx, canvas.height*sy);
     ctx.fillStyle='#ff333355'; ctx.font='6px Orbitron,Arial'; ctx.fillText('MAP',mx+3,my+9);
