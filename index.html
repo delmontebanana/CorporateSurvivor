@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head> 
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Corporate Survivor</title>
@@ -408,36 +408,179 @@
             100% { opacity: 0; transform: translate(-50%,-58%) scale(0.9); }
         }
 
+        /* ---- PAUSE MENU ---- */
+        #pause-screen {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 150;
+            gap: 0;
+        }
+
+        #pause-screen h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(14px, 2.5vw, 26px);
+            color: #ffcc44;
+            text-shadow: 0 0 20px #ffaa00, 3px 3px 0 #664400;
+            letter-spacing: 3px;
+            margin-bottom: 40px;
+        }
+
+        .pause-btn {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(8px, 1.4vw, 12px);
+            padding: 14px 50px;
+            background: transparent;
+            border: 2px solid #ffcc44;
+            color: #ffcc44;
+            cursor: pointer;
+            letter-spacing: 2px;
+            transition: all 0.15s;
+            margin: 8px 0;
+            width: 260px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pause-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: #ffcc44;
+            transform: translateX(-100%);
+            transition: transform 0.2s;
+        }
+
+        .pause-btn span { position: relative; }
+        .pause-btn:hover::before { transform: translateX(0); }
+        .pause-btn:hover { color: #000; }
+
+        .pause-btn.exit-btn { border-color: #ff4444; color: #ff4444; }
+        .pause-btn.exit-btn::before { background: #ff4444; }
+        .pause-btn.exit-btn:hover { color: #fff; }
+
+        #pause-hint {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(5px, 0.8vw, 7px);
+            color: #ffffff33;
+            letter-spacing: 2px;
+            margin-top: 28px;
+        }
+
+        /* ---- GAME OVER (NOT HIRED) ---- */
         #game-over {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.93);
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             z-index: 200;
-            gap: 18px;
+            gap: 0;
+            overflow: hidden;
         }
 
-        #game-over h2 {
+        #game-over-bg {
+            position: absolute;
+            inset: 0;
+            background: #000;
+        }
+
+        /* Scanlines effect */
+        #game-over-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,0,0,0.4) 2px,
+                rgba(0,0,0,0.4) 4px
+            );
+            pointer-events: none;
+        }
+
+        #go-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            animation: goSlideIn 0.6s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+        }
+
+        @keyframes goSlideIn {
+            0% { transform: translateY(-60px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        #go-title {
             font-family: 'Press Start 2P', cursive;
-            font-size: clamp(16px, 3.5vw, 34px);
-            color: #ff3333;
-            text-shadow: 0 0 30px #ff0000;
-            animation: titlePulse 1s ease-in-out infinite;
+            font-size: clamp(28px, 6vw, 72px);
+            color: #ff0000;
+            text-shadow: 6px 6px 0 #660000, 0 0 40px #ff0000, 0 0 80px #ff000066;
+            letter-spacing: 4px;
+            line-height: 1.3;
+            text-align: center;
+            animation: goFlicker 0.1s step-end infinite;
+            margin-bottom: 10px;
+        }
+
+        @keyframes goFlicker {
+            0%,90%,100% { opacity: 1; }
+            92% { opacity: 0.8; }
+            94% { opacity: 1; }
+            96% { opacity: 0.6; }
+            98% { opacity: 1; }
+        }
+
+        #go-subtitle {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(7px, 1.3vw, 13px);
+            color: #ff6666;
+            letter-spacing: 6px;
+            margin-bottom: 36px;
+            text-transform: uppercase;
+            animation: btnBlink 2s step-end infinite;
+        }
+
+        /* Red curtain bars - VS style */
+        .go-bar {
+            position: absolute;
+            left: 0; right: 0;
+            background: #cc0000;
+            z-index: 1;
+            animation: barSlide 0.5s ease-out forwards;
+        }
+
+        .go-bar.top { top: 0; height: 8px; transform: scaleX(0); transform-origin: left; }
+        .go-bar.bottom { bottom: 0; height: 8px; transform: scaleX(0); transform-origin: right; }
+
+        @keyframes barSlide {
+            0% { transform: scaleX(0); }
+            100% { transform: scaleX(1); }
         }
 
         .go-stats {
             display: grid;
             grid-template-columns: auto auto;
-            gap: 10px 50px;
+            gap: 8px 50px;
             font-size: clamp(6px, 1vw, 10px);
             color: #ffcc44;
             text-align: left;
+            margin-bottom: 28px;
+            border: 1px solid #ff333333;
+            padding: 16px 30px;
+            background: rgba(100,0,0,0.2);
         }
 
-        .go-stat-label { color: #ff4444aa; }
+        .go-stat-label { color: #ff6666; }
 
         #restart-btn {
             font-family: 'Press Start 2P', cursive;
@@ -449,10 +592,9 @@
             cursor: pointer;
             letter-spacing: 2px;
             transition: all 0.2s;
-            margin-top: 8px;
         }
 
-        #restart-btn:hover { background: #ff3333; color: #000; }
+        #restart-btn:hover { background: #ff3333; color: #fff; }
     </style>
 </head>
 <body>
@@ -496,13 +638,27 @@
 </div>
 
 <div id="game-over">
-    <h2>YOU'RE FIRED</h2>
-    <div class="go-stats" id="go-stats"></div>
-    <button id="restart-btn" onclick="location.reload()">▶ TRY AGAIN</button>
+    <div id="game-over-bg"></div>
+    <div class="go-bar top"></div>
+    <div class="go-bar bottom"></div>
+    <div id="go-content">
+        <div id="go-title">NOT<br>HIRED!</div>
+        <div id="go-subtitle">— better luck next quarter —</div>
+        <div class="go-stats" id="go-stats"></div>
+        <button id="restart-btn" onclick="location.reload()">▶ TRY AGAIN</button>
+    </div>
 </div>
 
 <div id="game-wrapper">
     <canvas id="gameCanvas"></canvas>
+
+    <!-- Pause Screen (inside game-wrapper so it's positioned over canvas) -->
+    <div id="pause-screen">
+        <h2>— PAUSED —</h2>
+        <button class="pause-btn" onclick="resumeGame()"><span>▶ RESUME</span></button>
+        <button class="pause-btn exit-btn" onclick="exitToTitle()"><span>✕ EXIT TO MENU</span></button>
+        <div id="pause-hint">ESC TO RESUME</div>
+    </div>
 
     <div id="hud">
         <div class="hud-left">
@@ -639,8 +795,8 @@ document.addEventListener('click', () => {
 const WORLD_W = 2800, WORLD_H = 2000;
 
 // Game state
-let gameRunning = false, gameOver = false;
-let startTime = 0, score = 0, killCount = 0, wave = 1;
+let gameRunning = false, gameOver = false, gamePaused = false;
+let startTime = 0, pausedTime = 0, score = 0, killCount = 0, wave = 1;
 let camera = { x: 0, y: 0 };
 let screenShake = 0;
 
@@ -652,13 +808,53 @@ const player = {
     damageMultiplier: 1, invincibleTimer: 0, facing: 1
 };
 
+// Active special effects
+let forcefield = null;      // { radius, timer, maxTimer, angle }
+let megaWeapon = null;      // { timer, maxTimer } — chain lightning orbs
+let magnetActive = false;   // magnet pulls all xp orbs
+let magnetTimer = 0;
+let freezeTimer = 0;        // all enemies frozen
+let berserkerTimer = 0;     // massively boosted fire rate & damage
+
 let bulletPower = 1;
 let keys = {};
 document.addEventListener('keydown', e => {
+    // ESC pauses/resumes
+    if (e.key === 'Escape') {
+        if (gameRunning && !gameOver) {
+            if (gamePaused) resumeGame(); else pauseGame();
+        }
+        return;
+    }
     keys[e.key] = true;
     if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
 });
 document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// ---- Pause / Resume / Exit ----
+function pauseGame() {
+    gamePaused = true;
+    pausedTime = performance.now();
+    bgMusic.pause();
+    document.getElementById('pause-screen').style.display = 'flex';
+}
+
+function resumeGame() {
+    gamePaused = false;
+    // Adjust startTime so timer doesn't jump
+    startTime += (performance.now() - pausedTime);
+    bgMusic.play().catch(()=>{});
+    document.getElementById('pause-screen').style.display = 'none';
+}
+
+function exitToTitle() {
+    gamePaused = false; gameRunning = false; gameOver = false;
+    bgMusic.pause(); bgMusic.currentTime = 0;
+    clearInterval(spawnIntervalId); clearInterval(difficultyTimer);
+    document.getElementById('pause-screen').style.display = 'none';
+    document.getElementById('game-wrapper').style.display = 'none';
+    document.getElementById('title-screen').style.display = 'flex';
+}
 
 // Entity arrays
 let enemies = [], projectiles = [], powerUps = [], particles = [], floatingTexts = [], xpOrbs = [];
@@ -695,8 +891,16 @@ function startGame() {
         }
     }, 1000);
 
-    // Auto-shoot
-    setInterval(() => { if (gameRunning && !gameOver) shootAll(); }, 850);
+    // Auto-shoot (berserker halves interval)
+    let shootIntervalId = null;
+    function scheduleShoot() {
+        const interval = berserkerTimer > 0 ? 425 : 850;
+        shootIntervalId = setTimeout(() => {
+            if (gameRunning && !gameOver && !gamePaused) shootAll();
+            scheduleShoot();
+        }, interval);
+    }
+    scheduleShoot();
 
     // Power-up spawner
     setInterval(() => { if (gameRunning && !gameOver) spawnPowerUp(); }, 7000);
@@ -763,8 +967,12 @@ function spawnEnemy() {
 }
 
 function spawnPowerUp() {
-    const types = ['health','bullet','speed','damage'];
-    const type = types[Math.floor(Math.random()*types.length)];
+    // Weighted pool: common vs rare
+    const pool = [
+        'health','health','bullet','bullet','speed','damage',
+        'forcefield','magnet','freeze','megaweapon','berserker','vampiric'
+    ];
+    const type = pool[Math.floor(Math.random()*pool.length)];
     const px = Math.max(60, Math.min(WORLD_W-60, player.x + (Math.random()-0.5)*500));
     const py = Math.max(60, Math.min(WORLD_H-60, player.y + (Math.random()-0.5)*500));
     powerUps.push({ x: px, y: py, size: 28, type, pulsePhase: Math.random()*Math.PI*2, bobPhase: Math.random()*Math.PI*2 });
@@ -821,16 +1029,50 @@ function gainXP(amount) {
 function applyPowerUp(type) {
     const n = document.getElementById('pickup-notify');
     const defs = {
-        health: { msg:'❤ +30 HP', color:'#ff4444', shadow:'#ff0000' },
-        bullet: { msg:'⚡ MORE BULLETS!', color:'#ffdd00', shadow:'#ffaa00' },
-        speed:  { msg:'💨 SPEED BOOST!', color:'#44ffaa', shadow:'#00ff88' },
-        damage: { msg:'💥 POWER UP!',    color:'#ff8844', shadow:'#ff4400' }
+        health:      { msg:'❤ +30 HP',           color:'#ff4444', shadow:'#ff0000' },
+        bullet:      { msg:'⚡ MORE BULLETS!',     color:'#ffdd00', shadow:'#ffaa00' },
+        speed:       { msg:'💨 SPEED BOOST!',      color:'#44ffaa', shadow:'#00ff88' },
+        damage:      { msg:'💥 POWER UP!',         color:'#ff8844', shadow:'#ff4400' },
+        forcefield:  { msg:'🛡 FORCEFIELD!',       color:'#88aaff', shadow:'#4466ff' },
+        magnet:      { msg:'🧲 XP MAGNET!',        color:'#ff88ff', shadow:'#ff00ff' },
+        freeze:      { msg:'❄ FREEZE!',            color:'#aaeeff', shadow:'#00ccff' },
+        megaweapon:  { msg:'☄ MEGA WEAPON!',       color:'#ffaa00', shadow:'#ff6600' },
+        berserker:   { msg:'🔥 BERSERKER!',        color:'#ff4400', shadow:'#ff2200' },
+        vampiric:    { msg:'🩸 VAMPIRIC DRAIN!',   color:'#cc44ff', shadow:'#880088' },
     };
-    const d = defs[type];
-    if (type==='health') player.health = Math.min(player.maxHealth, player.health+30);
-    else if (type==='bullet') bulletPower = Math.min(bulletPower+1, 16);
-    else if (type==='speed') player.speed = Math.min(player.speed+0.5, 7);
-    else if (type==='damage') player.damageMultiplier += 0.25;
+    const d = defs[type] || defs.health;
+
+    if (type==='health') {
+        player.health = Math.min(player.maxHealth, player.health+30);
+    } else if (type==='bullet') {
+        bulletPower = Math.min(bulletPower+1, 16);
+    } else if (type==='speed') {
+        player.speed = Math.min(player.speed+0.5, 7);
+    } else if (type==='damage') {
+        player.damageMultiplier += 0.25;
+    } else if (type==='forcefield') {
+        // Spinning ring of energy that destroys enemies on contact
+        forcefield = { radius: 80, timer: 600, maxTimer: 600, angle: 0, damage: 15 };
+    } else if (type==='magnet') {
+        // Sucks all xp orbs instantly + short magnet window
+        magnetActive = true; magnetTimer = 300;
+        xpOrbs.forEach(orb => { orb.dx += (player.x-orb.x)*0.2; orb.dy += (player.y-orb.y)*0.2; });
+    } else if (type==='freeze') {
+        // Freeze all enemies for 4 seconds
+        freezeTimer = 240;
+        enemies.forEach(e => e.frozen = true);
+        spawnFreezeEffect();
+    } else if (type==='megaweapon') {
+        // Giant orbiting energy balls for 8 seconds
+        megaWeapon = { timer: 480, maxTimer: 480, angle: 0, orbs: 3 };
+    } else if (type==='berserker') {
+        // Double fire rate and 2x damage for 6 seconds
+        berserkerTimer = 360;
+    } else if (type==='vampiric') {
+        // Each kill heals player for 3s
+        player.vampiricTimer = 480;
+    }
+
     n.textContent = d.msg;
     n.style.color = d.color;
     n.style.textShadow = `0 0 20px ${d.shadow}`;
@@ -839,6 +1081,18 @@ function applyPowerUp(type) {
     n.offsetHeight;
     n.style.animation = 'pickupAnim 1.5s ease-out forwards';
     setTimeout(()=>{n.style.display='none';}, 1500);
+}
+
+function spawnFreezeEffect() {
+    for (let i=0;i<40;i++) {
+        const a=Math.random()*Math.PI*2, r=Math.random()*canvas.width*0.5;
+        particles.push({
+            x: player.x+Math.cos(a)*r, y: player.y+Math.sin(a)*r,
+            dx:(Math.random()-0.5)*2, dy:(Math.random()-0.5)*2-1,
+            size:Math.random()*8+3, life:60+Math.random()*40, maxLife:100,
+            color:`hsl(190,100%,${70+Math.random()*30}%)`
+        });
+    }
 }
 
 // ============================================================
@@ -890,7 +1144,7 @@ function updateHUD() {
 // UPDATE
 // ============================================================
 function update() {
-    if (gameOver) return;
+    if (gameOver || gamePaused) return;
 
     // Movement
     let dx=0, dy=0;
@@ -910,50 +1164,123 @@ function update() {
     camera.x = Math.max(0, Math.min(WORLD_W-canvas.width, camera.x));
     camera.y = Math.max(0, Math.min(WORLD_H-canvas.height, camera.y));
 
+    // Enemy damage scales with player level (each level adds 15% more damage)
+    const enemyDmgScale = 1 + (player.level - 1) * 0.15;
+    const baseDmg = 0.35 * enemyDmgScale;
+
+    // Tick special timers
+    if (freezeTimer > 0) { freezeTimer--; if (freezeTimer===0) enemies.forEach(e=>e.frozen=false); }
+    if (magnetTimer > 0) { magnetTimer--; if (magnetTimer===0) magnetActive=false; }
+    if (berserkerTimer > 0) berserkerTimer--;
+    if (player.vampiricTimer > 0) player.vampiricTimer--;
+
+    // Forcefield
+    if (forcefield) {
+        forcefield.timer--;
+        forcefield.angle += 0.04;
+        if (forcefield.timer <= 0) { forcefield = null; }
+        else {
+            // Damage enemies inside forcefield radius
+            for (let i=enemies.length-1;i>=0;i--) {
+                const e=enemies[i];
+                const dist=Math.hypot(e.x+e.width/2 - player.x-player.width/2, e.y+e.height/2 - player.y-player.height/2);
+                if (dist < forcefield.radius + e.width/2) {
+                    e.health -= forcefield.damage;
+                    e.flashTimer = 3;
+                    if (e.health<=0) {
+                        spawnExplosion(e.x+e.width/2, e.y+e.height/2);
+                        spawnXpOrb(e.x+e.width/2, e.y+e.height/2);
+                        if (player.vampiricTimer>0) player.health = Math.min(player.maxHealth, player.health+3);
+                        addKillFeed(); score+=10+wave*2; gainXP(20); killCount++;
+                        enemies.splice(i,1);
+                    }
+                }
+            }
+        }
+    }
+
+    // Mega weapon orbiting balls
+    if (megaWeapon) {
+        megaWeapon.timer--;
+        megaWeapon.angle += 0.06;
+        if (megaWeapon.timer <= 0) { megaWeapon = null; }
+        else {
+            for (let o=0; o<megaWeapon.orbs; o++) {
+                const orbAngle = megaWeapon.angle + (Math.PI*2/megaWeapon.orbs)*o;
+                const orbR = 70;
+                const ox = player.x+player.width/2 + Math.cos(orbAngle)*orbR;
+                const oy = player.y+player.height/2 + Math.sin(orbAngle)*orbR;
+                for (let i=enemies.length-1;i>=0;i--) {
+                    const e=enemies[i];
+                    const dist=Math.hypot(e.x+e.width/2-ox, e.y+e.height/2-oy);
+                    if (dist < 28) {
+                        e.health -= 40 * player.damageMultiplier;
+                        e.flashTimer = 4;
+                        spawnBlood(ox,oy,4);
+                        if (e.health<=0) {
+                            spawnExplosion(e.x+e.width/2, e.y+e.height/2);
+                            spawnXpOrb(e.x+e.width/2, e.y+e.height/2);
+                            if (player.vampiricTimer>0) player.health = Math.min(player.maxHealth, player.health+3);
+                            addKillFeed(); score+=10+wave*2; gainXP(20); killCount++;
+                            screenShake=Math.max(screenShake,3);
+                            enemies.splice(i,1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Magnet pulls all orbs
+    if (magnetActive) {
+        xpOrbs.forEach(orb => {
+            orb.dx += (player.x-orb.x)*0.05;
+            orb.dy += (player.y-orb.y)*0.05;
+        });
+    }
+
     // Enemies
     for (let i=enemies.length-1;i>=0;i--) {
         const e=enemies[i];
         const ddx=player.x-e.x, ddy=player.y-e.y;
         const dist=Math.hypot(ddx,ddy);
         e.wobble += 0.04;
-        if (dist>0) { e.x+=ddx/dist*e.speed; e.y+=ddy/dist*e.speed; }
+        if (!e.frozen && dist>0) { e.x+=ddx/dist*e.speed; e.y+=ddy/dist*e.speed; }
         if (e.flashTimer>0) e.flashTimer--;
 
-        // Player damage
+        // Player damage — scales with level
         if (player.invincibleTimer===0 &&
             player.x<e.x+e.width && player.x+player.width>e.x &&
             player.y<e.y+e.height && player.y+player.height>e.y) {
-            player.health -= 0.35;
+            player.health -= baseDmg;
             player.invincibleTimer = 10;
             screenShake = Math.max(screenShake, 5);
         }
     }
 
     // Projectiles vs enemies
+    const dmgMult = berserkerTimer > 0 ? player.damageMultiplier * 2 : player.damageMultiplier;
     for (let i=projectiles.length-1;i>=0;i--) {
         const p=projectiles[i];
         p.x+=p.dx; p.y+=p.dy; p.life--;
         if (p.life<=0||p.x<0||p.x>WORLD_W||p.y<0||p.y>WORLD_H) { projectiles.splice(i,1); continue; }
-        let hit=false;
         for (let j=enemies.length-1;j>=0;j--) {
             const e=enemies[j];
             if (p.x<e.x+e.width && p.x+p.size>e.x && p.y<e.y+e.height && p.y+p.size>e.y) {
-                e.health -= p.damage;
+                const dmg = p.damage * (berserkerTimer>0?2:1);
+                e.health -= dmg;
                 e.flashTimer = 5;
                 spawnBlood(p.x,p.y,5);
-                addFloat(e.x+e.width/2, e.y-10, Math.floor(p.damage), '#ff8888', 10);
+                addFloat(e.x+e.width/2, e.y-10, Math.floor(dmg), berserkerTimer>0?'#ff6600':'#ff8888', 10);
                 projectiles.splice(i,1);
                 if (e.health<=0) {
                     spawnExplosion(e.x+e.width/2, e.y+e.height/2);
                     spawnXpOrb(e.x+e.width/2, e.y+e.height/2);
-                    addKillFeed();
-                    score += 10 + wave*2;
-                    gainXP(20);
-                    killCount++;
-                    screenShake = Math.max(screenShake, 3);
-                    enemies.splice(j,1);
+                    if (player.vampiricTimer>0) player.health = Math.min(player.maxHealth, player.health+3);
+                    addKillFeed(); score+=10+wave*2; gainXP(20); killCount++;
+                    screenShake=Math.max(screenShake,3); enemies.splice(j,1);
                 }
-                hit=true; break;
+                break;
             }
         }
     }
@@ -964,7 +1291,7 @@ function update() {
         const ddx=player.x+player.width/2-orb.x, ddy=player.y+player.height/2-orb.y;
         const dist=Math.hypot(ddx,ddy);
         orb.phase+=0.12;
-        if (dist<160) { const pull=Math.min(9,150/dist*1.5); orb.dx+=ddx/dist*pull; orb.dy+=ddy/dist*pull; }
+        if (dist<160||magnetActive) { const pull=Math.min(9,150/dist*1.5); orb.dx+=ddx/dist*pull; orb.dy+=ddy/dist*pull; }
         orb.dx*=0.88; orb.dy*=0.88;
         orb.x+=orb.dx; orb.y+=orb.dy;
         if (dist<28) { gainXP(6); xpOrbs.splice(i,1); }
@@ -1038,7 +1365,11 @@ function draw() {
         const pulse=Math.sin(pu.pulsePhase)*4;
         const bob=Math.sin(pu.bobPhase)*6;
         const sz=pu.size+pulse;
-        const cols={health:'#ff4444',bullet:'#ffdd00',speed:'#44ffaa',damage:'#ff8844'};
+        const cols={
+            health:'#ff4444', bullet:'#ffdd00', speed:'#44ffaa', damage:'#ff8844',
+            forcefield:'#88aaff', magnet:'#ff88ff', freeze:'#aaeeff',
+            megaweapon:'#ffaa00', berserker:'#ff4400', vampiric:'#cc44ff'
+        };
         const col=cols[pu.type]||'#fff';
         ctx.save();
         ctx.shadowBlur=28+pulse; ctx.shadowColor=col;
@@ -1046,8 +1377,11 @@ function draw() {
         ctx.beginPath(); ctx.arc(pu.x+sz/2, pu.y+sz/2+bob, sz*0.75, 0, Math.PI*2); ctx.fill();
         ctx.drawImage(powerUpImage, pu.x-pulse/2, pu.y-pulse/2+bob, sz+pulse, sz+pulse);
         ctx.restore();
-        // Label
-        const labels={health:'+HP',bullet:'⚡FIRE',speed:'SPD+',damage:'DMG+'};
+        const labels={
+            health:'+HP', bullet:'⚡FIRE', speed:'SPD+', damage:'DMG+',
+            forcefield:'🛡FIELD', magnet:'🧲XP', freeze:'❄FREEZE',
+            megaweapon:'☄MEGA', berserker:'🔥RAGE', vampiric:'🩸DRAIN'
+        };
         ctx.fillStyle=col; ctx.font='bold 8px Orbitron,Arial'; ctx.textAlign='center';
         ctx.fillText(labels[pu.type]||'', pu.x+sz/2, pu.y+sz+16+bob);
     });
@@ -1068,13 +1402,15 @@ function draw() {
         ctx.globalAlpha=0.28; ctx.fillStyle='#000';
         ctx.beginPath(); ctx.ellipse(e.x+e.width/2,e.y+e.height+3,e.width*0.45,5,0,0,Math.PI*2); ctx.fill();
         ctx.globalAlpha=1;
-        if (e.flashTimer>0) ctx.filter='brightness(10) saturate(0)';
+        if (e.frozen) ctx.filter='hue-rotate(180deg) brightness(1.4) saturate(0.5)';
+        else if (e.flashTimer>0) ctx.filter='brightness(10) saturate(0)';
         ctx.drawImage(enemyImage,e.x+wb,e.y,e.width,e.height);
         // HP bar
         ctx.filter='none';
         const bx=e.x, by=e.y-7, bw=e.width;
         ctx.fillStyle='#330000'; ctx.fillRect(bx,by,bw,4);
-        ctx.fillStyle='#ff3333'; ctx.fillRect(bx,by,bw*(e.health/e.maxHealth),4);
+        ctx.fillStyle= e.frozen ? '#44aaff' : '#ff3333';
+        ctx.fillRect(bx,by,bw*(e.health/e.maxHealth),4);
         ctx.restore();
     });
 
@@ -1084,7 +1420,9 @@ function draw() {
     ctx.beginPath(); ctx.ellipse(player.x+player.width/2,player.y+player.height+4,player.width*0.5,7,0,0,Math.PI*2); ctx.fill();
     ctx.globalAlpha=1;
     if (player.invincibleTimer>0 && Math.floor(player.invincibleTimer/2)%2===0) ctx.globalAlpha=0.35;
-    ctx.shadowBlur=22; ctx.shadowColor='#ff7755';
+    // Berserker red glow
+    ctx.shadowBlur = berserkerTimer>0 ? 35 : 22;
+    ctx.shadowColor = berserkerTimer>0 ? '#ff2200' : '#ff7755';
     if (player.facing===-1) {
         ctx.translate(player.x+player.width,player.y);
         ctx.scale(-1,1);
@@ -1093,6 +1431,72 @@ function draw() {
         ctx.drawImage(playerImage,player.x,player.y,player.width,player.height);
     }
     ctx.restore();
+
+    // Forcefield
+    if (forcefield) {
+        const cx=player.x+player.width/2, cy=player.y+player.height/2;
+        const alpha = forcefield.timer/forcefield.maxTimer;
+        ctx.save();
+        ctx.shadowBlur=30*alpha; ctx.shadowColor='#88aaff';
+        // Outer ring
+        ctx.strokeStyle=`rgba(136,170,255,${alpha*0.8})`;
+        ctx.lineWidth=4;
+        ctx.beginPath(); ctx.arc(cx,cy,forcefield.radius,0,Math.PI*2); ctx.stroke();
+        // Spinning arcs
+        for (let a=0;a<3;a++) {
+            const ang = forcefield.angle + (Math.PI*2/3)*a;
+            ctx.strokeStyle=`rgba(200,220,255,${alpha*0.6})`;
+            ctx.lineWidth=2;
+            ctx.beginPath();
+            ctx.arc(cx,cy,forcefield.radius, ang, ang+Math.PI*0.6);
+            ctx.stroke();
+        }
+        // Inner glow fill
+        const grad=ctx.createRadialGradient(cx,cy,forcefield.radius*0.7,cx,cy,forcefield.radius);
+        grad.addColorStop(0,'rgba(136,170,255,0)');
+        grad.addColorStop(1,`rgba(136,170,255,${alpha*0.12})`);
+        ctx.fillStyle=grad;
+        ctx.beginPath(); ctx.arc(cx,cy,forcefield.radius,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+
+    // Mega weapon orbiting balls
+    if (megaWeapon) {
+        const cx=player.x+player.width/2, cy=player.y+player.height/2;
+        const alpha=megaWeapon.timer/megaWeapon.maxTimer;
+        for (let o=0;o<megaWeapon.orbs;o++) {
+            const ang=megaWeapon.angle+(Math.PI*2/megaWeapon.orbs)*o;
+            const ox=cx+Math.cos(ang)*70, oy=cy+Math.sin(ang)*70;
+            ctx.save();
+            ctx.shadowBlur=30; ctx.shadowColor='#ffaa00';
+            // Outer glow
+            ctx.fillStyle=`rgba(255,150,0,${alpha*0.4})`;
+            ctx.beginPath(); ctx.arc(ox,oy,22,0,Math.PI*2); ctx.fill();
+            // Core
+            ctx.fillStyle=`rgba(255,220,80,${alpha})`;
+            ctx.beginPath(); ctx.arc(ox,oy,14,0,Math.PI*2); ctx.fill();
+            // Bright center
+            ctx.fillStyle=`rgba(255,255,200,${alpha})`;
+            ctx.beginPath(); ctx.arc(ox,oy,6,0,Math.PI*2); ctx.fill();
+            // Orbit trail
+            ctx.strokeStyle=`rgba(255,150,0,${alpha*0.3})`;
+            ctx.lineWidth=2;
+            ctx.beginPath(); ctx.arc(cx,cy,70,0,Math.PI*2); ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    // Vampiric aura
+    if (player.vampiricTimer>0) {
+        const cx=player.x+player.width/2, cy=player.y+player.height/2;
+        const a=(player.vampiricTimer%30)/30;
+        ctx.save();
+        ctx.shadowBlur=20; ctx.shadowColor='#cc44ff';
+        ctx.strokeStyle=`rgba(200,80,255,${a*0.7})`;
+        ctx.lineWidth=2;
+        ctx.beginPath(); ctx.arc(cx,cy,30+a*10,0,Math.PI*2); ctx.stroke();
+        ctx.restore();
+    }
 
     // Projectiles
     projectiles.forEach(p => {
@@ -1194,8 +1598,10 @@ function triggerGameOver() {
 // ============================================================
 function gameLoop() {
     if (!gameRunning) return;
-    update();
-    draw();
+    if (!gamePaused) {
+        update();
+        draw();
+    }
     requestAnimationFrame(gameLoop);
 }
 </script>
